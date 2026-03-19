@@ -1,7 +1,9 @@
 from mongoengine import connect, Document, StringField, DateTimeField, BooleanField, ReferenceField
+from mongoengine.connection import get_db
 from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
+import certifi
 
 load_dotenv()
 
@@ -13,7 +15,15 @@ if not MONGO_URI:
 def connect_db():
     print("Connecting to MongoDB...")
     try:
-        connect(host=MONGO_URI)
+        connect(
+            host=MONGO_URI,
+            tlsCAFile=certifi.where(),
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000,
+            socketTimeoutMS=5000,
+        )
+        # Force a real connection now (MongoEngine can be lazy otherwise).
+        get_db().client.admin.command("ping")
         print("MongoDB Connected Successfully")
     except Exception as e:
         print(f"MongoDB Connection Failed: {e}")

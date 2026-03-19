@@ -1,8 +1,9 @@
 fastapi
 uvicorn
 supabase
-google-genai
+google-generativeai
 python-dotenv
 pydantic
 mongoengine
+certifi
 passlib[bcrypt]

@@ -74,7 +74,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 The backend will run at `http://localhost:8000`
 
-> **Note**: Make sure you have a `.env` file in the backend folder with required environment variables.
+> **Note**: Make sure you have a `.env` file in the backend folder with required environment variables (ask team lead for the values).
 
 ---
 

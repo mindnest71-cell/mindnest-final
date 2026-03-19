@@ -16,9 +16,9 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import api from '../utils/api';
+import api from '@/utils/api';
 
-import { useTheme } from '../context/theme-context';
+import { useTheme } from '@/context/theme-context';
 
 export default function EditProfile() {
   const router = useRouter();

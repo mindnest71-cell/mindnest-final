@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, Header, Depends
 from pydantic import BaseModel
-from app.services.embeddings import generate_embedding
-from app.services.retrieval import search_techniques, get_crisis_resources
-from app.services.llm import classify_severity, generate_response
+from app.services.retrieval import get_crisis_resources
+from app.services.llm import generate_response
 from app.database import Chat, User
 from datetime import datetime, timezone
+import traceback
+import asyncio
 
 router = APIRouter()
 
@@ -19,7 +20,6 @@ class ChatResponse(BaseModel):
     quotes: list = []
 
 def detect_language(text: str) -> str:
-    # Simple heuristic: check for Thai unicode range
     for char in text:
         if '\u0E00' <= char <= '\u0E7F':
             return 'th'
@@ -42,13 +42,21 @@ async def get_chat_history(authorization: str = Header(None)):
     user_id = get_current_user_id(authorization)
     if not user_id:
         return [] # Return empty if no auth, or raise 401
-    
-    user = User.objects(id=user_id).first()
+
+    try:
+        user = User.objects(id=user_id).first()
+    except Exception as e:
+        print(f"Failed to fetch user/history from DB: {e}")
+        return []
     if not user:
         return []
 
     # Fetch last 50 messages
-    chats = Chat.objects(user=user).order_by('timestamp').limit(50)
+    try:
+        chats = Chat.objects(user=user).order_by('timestamp').limit(50)
+    except Exception as e:
+        print(f"Failed to fetch chats from DB: {e}")
+        return []
     
     history = []
     for chat in chats:
@@ -71,12 +79,20 @@ async def delete_chat_history(authorization: str = Header(None)):
     user_id = get_current_user_id(authorization)
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
-    user = User.objects(id=user_id).first()
+
+    try:
+        user = User.objects(id=user_id).first()
+    except Exception as e:
+        print(f"Failed to resolve user during delete history: {e}")
+        raise HTTPException(status_code=503, detail="Database unavailable")
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-        
-    Chat.objects(user=user).delete()
+
+    try:
+        Chat.objects(user=user).delete()
+    except Exception as e:
+        print(f"Failed to delete chat history from DB: {e}")
+        raise HTTPException(status_code=503, detail="Database unavailable")
     return {"message": "Chat history deleted"}
 
 @router.post("/chat", response_model=ChatResponse)
@@ -85,34 +101,62 @@ async def chat_endpoint(request: ChatRequest, authorization: str = Header(None))
         user_id = get_current_user_id(authorization)
         user = None
         if user_id:
-            user = User.objects(id=user_id).first()
+            try:
+                user = User.objects(id=user_id).first()
+            except Exception as user_lookup_error:
+                # Treat invalid/malformed auth token as anonymous instead of failing the chat endpoint.
+                print(f"Failed to resolve user from Authorization header: {user_lookup_error}")
+                user = None
 
         # 1. Detect Language
         language = detect_language(request.message)
         
-        # 2. Classify Severity
-        severity = classify_severity(request.message)
+        # 2. Normal conversational mode (no per-message severity classification)
+        # Keep response shape stable for frontend while avoiding an extra LLM call.
+        severity = "LOW"
         
-        # 3. Generate Embedding
-        embedding = generate_embedding(request.message)
-        if not embedding:
-            raise HTTPException(status_code=500, detail="Failed to generate embedding")
+        # 3. Technique cards disabled for normal conversational mode
+        techniques = []
         
-        # 4. Search Techniques
-        techniques = search_techniques(embedding, language=language, match_count=5)
-        
-        # 5. Get Crisis Resources (if needed)
+        # 4. Get Crisis Resources (if needed)
         crisis_info = []
         if severity in ["HIGH", "CRISIS"]:
             crisis_info = get_crisis_resources(language=language)
             
+        # 5. Fetch recent chat history for conversation memory
+        chat_history = []
+        if user:
+            try:
+                recent_chats = Chat.objects(user=user).order_by('-timestamp').limit(10)
+                chat_history = [
+                    {"role": c.role, "text": c.message}
+                    for c in reversed(list(recent_chats))
+                ]
+            except Exception as e:
+                print(f"Failed to fetch chat history: {e}")
+
         # 6. Generate Response
-        # Format context from techniques
         context = ""
-        for t in techniques:
-            context += f"Technique: {t['title']}\nDescription: {t['content']}\nInstructions: {t['instructions']}\n\n"
-            
-        llm_output = generate_response(request.message, context, severity, crisis_info, language=language)
+
+        try:
+            llm_output = await asyncio.wait_for(
+                asyncio.to_thread(
+                    generate_response,
+                    request.message,
+                    context,
+                    severity,
+                    crisis_info,
+                    language,
+                    chat_history,
+                ),
+                timeout=20,
+            )
+        except asyncio.TimeoutError:
+            print("LLM response timed out after 20s; returning fallback response")
+            llm_output = {
+                "text": "ขออภัย ตอนนี้ตอบช้ากว่าปกติ ลองส่งใหม่อีกครั้งได้ไหม?",
+                "quotes": [],
+            }
         
         # Handle case where llm_output might be a string (fallback) or dict
         if isinstance(llm_output, str):
@@ -155,4 +199,5 @@ async def chat_endpoint(request: ChatRequest, authorization: str = Header(None))
         
     except Exception as e:
         print(f"Error in chat endpoint: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

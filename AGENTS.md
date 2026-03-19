@@ -44,7 +44,7 @@ Tests (backend)
 
 ### Notes on Environments
 - Backend requires `.env` variables: `SUPABASE_URL`, `SUPABASE_KEY`, `GEMINI_API_KEY`.
-- Frontend uses `frontend/utils/api.js` with `TEST_MODE` toggle for local vs prod.
+- Frontend uses `frontend/utils/api.js` with `TEST_MODE` toggle for locail vs prod.
 
 ## Code Style and Conventions
 
@@ -122,11 +122,80 @@ Testing
 - Do not edit `.env` or commit secrets.
 - Avoid touching `frontend/utils/api.js` unless asked.
 - When adding new commands, update this file.
+- Do **not** re-enable per-message severity classification or technique search without explicit instruction — these were intentionally removed.
+- Do **not** add auto-save behaviour to the reminder time picker — it must go through the Set Reminder button.
 
 ## Quick Pointers
 - Frontend routes live in `frontend/app/` (Expo Router).
 - Backend entry is `backend/app/main.py`.
 - Test mode toggle for API: `frontend/utils/api.js`.
+- Global theme state: `frontend/context/theme-context.tsx` — use `useTheme()`.
+- Global language state: `frontend/context/language-context.tsx` — use `useLanguage()`.
+  - Supported languages: `'en'` | `'th'`.
+  - Language is persisted to AsyncStorage under key `app_language`.
+  - Both providers are registered in `frontend/app/_layout.tsx`.
+
+## Feature Notes
+
+### Chat / LLM Architecture
+
+**Model**: `gemini-2.5-flash` via `google-generativeai` SDK (file: `backend/app/services/llm.py`).
+
+**Persona**: Calm, emotionally intelligent chat partner — talks like a normal person, NOT a therapist.
+- System instruction enforces natural, concise replies (1–3 sentences).
+- `_BANNED_OPENINGS` + `_sanitize_opening()` strip scripted openings (e.g. "ขอบคุณที่เปิดใจ") even if the model slips.
+
+**Severity**: Hardcoded to `"LOW"` in `chat.py` for all messages — per-message classification is disabled.
+- Technique cards (`techniques`) are always `[]`; cards only appear when the user explicitly requests coping methods.
+- Crisis resources (`get_crisis_resources`) are fetched only when severity is `HIGH`/`CRISIS`, which can't occur in normal mode (reserved for future re-enablement).
+
+**Conversation Memory**: `chat.py` fetches the last 10 messages from MongoDB and passes them as `history` to `generate_response()`, which builds a multi-turn Gemini `contents` array (last 8 messages).
+
+**Intent Detection** (Thai only, `llm.py`):
+- `detect_intent_th()` returns `"FOOD"` or `"CHAT"` using regex patterns.
+- `FOOD` intent: skips emotional support tone, clears history to prevent tone contamination, returns direct food/drink suggestions.
+
+**LLM Timeout**: `asyncio.wait_for(..., timeout=20)` wraps the LLM call in `chat.py`; returns a Thai fallback message on timeout.
+
+**Response format**: Gemini returns JSON `{"text": "...", "quotes": []}`. `chat.py` handles both dict and plain-string fallbacks.
+
+### i18n (Internationalisation)
+- Language is controlled globally via `LanguageProvider` in `_layout.tsx`.
+- Each screen that needs translated strings should define a `STRINGS` constant:
+  ```ts
+  const STRINGS = { en: { ... }, th: { ... } };
+  // inside component:
+  const { lang } = useLanguage();
+  const t = STRINGS[lang];
+  ```
+- The language toggle lives in **Settings → Preferences → Language** (TH / EN chips).
+- Do not add per-screen language toggle buttons; use the settings toggle only.
+
+### Mood Tracker
+- Screen: `frontend/app/moodtracker.tsx` — accessible from Home → Quick Actions card.
+- Users pick a daily mood level (1–5) with emoji: 😢 😔 😐 😊 😄
+- Data is stored locally in AsyncStorage under key `mood_history` as a JSON array of `{date, level, emoji, timestamp}`.
+- One entry per day; saving again prompts the user to confirm an update.
+- The screen shows a **7-day bar chart** (built with plain Views, no charting library) and a scrollable **history list** (last 30 entries).
+- Uses `useFocusEffect` to reload data on every navigation to the screen.
+- Fully i18n: EN and TH strings defined at the top of the file.
+
+### Daily Reminder Notification
+- Users set a notification time in **Settings → Notifications**.
+- The time picker does **not** auto-save on change; the user must tap the **Set Reminder** button to save and schedule.
+- The scheduled time is persisted to AsyncStorage under keys `daily_reminder_hour` and `daily_reminder_minute`.
+
+### Chat History
+- Chat messages are stored in MongoDB (backend) and cached in AsyncStorage under key `chat_history`.
+- The chat screen uses `useFocusEffect` (not `useEffect`) to reload history every time the user navigates to the screen, so deletes from Settings are reflected immediately.
+- Deleting history clears **both** MongoDB (via `DELETE /chat/history`) **and** the AsyncStorage cache.
+
+### Emergency Call
+- Users can save an emergency contact number in **Settings → Emergency Contact**.
+- The number is stored in AsyncStorage under key `emergency_contact_number`.
+- A red **Emergency Call** button is displayed on the **Home** screen above Quick Actions.
+- Tapping it calls `Linking.openURL('tel:<number>')`.
+- If no number is saved, an alert prompts the user to go to Settings first.
 
 ## Example Workflows
 

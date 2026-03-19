@@ -1,3 +1,14 @@
+/**
+ * signup.tsx — หน้าสมัครสมาชิก (3 ขั้นตอน)
+ *
+ * Step 1: ชื่อ-นามสกุล
+ * Step 2: อีเมล + รหัสผ่าน
+ * Step 3: Security Questions (2 ข้อ)
+ *
+ * แก้ข้อความ → แก้ใน STRINGS.en / STRINGS.th
+ * แก้คำถาม Security → แก้ใน QUESTIONS[] (บรรทัด ~89)
+ * API endpoint: POST /auth/register
+ */
 import React, { useMemo, useState } from 'react';
 import {
   SafeAreaView,
@@ -14,10 +25,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import api from '../utils/api';
+import api from '@/utils/api';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { useTheme } from '../context/theme-context';
+import { useTheme } from '@/context/theme-context';
 
 const STRINGS = {
   en: {

@@ -1,3 +1,12 @@
+/**
+ * index.tsx — Auth Gate (หน้าแรกที่แอปโหลด)
+ *
+ * ทำงานอัตโนมัติ ไม่มี UI จริงๆ:
+ *   - มี 'user_id' ใน AsyncStorage → ไป /home
+ *   - ไม่มี → ไป /login
+ *
+ * AsyncStorage key: 'user_id' (เก็บตอน login สำเร็จ, ลบตอน sign out)
+ */
 import { Redirect, useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import React, { useEffect, useState } from 'react';

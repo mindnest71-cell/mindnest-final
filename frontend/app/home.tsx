@@ -1,4 +1,22 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+/**
+ * home.tsx — หน้าหลัก (Home Screen)
+ *
+ * แก้ข้อความ → แก้ใน STRINGS.en / STRINGS.th
+ *
+ * AsyncStorage keys ที่โหลดตอนเปิดหน้า:
+ *   'user_name'                → ชื่อที่แสดงใน greeting
+ *   'emergency_contact_number' → เบอร์โทรฉุกเฉิน (ตั้งค่าใน Settings)
+ *
+ * Bottom Bar — tab ที่ active (สว่างเต็ม) คือ Home (home-variant icon)
+ *   ต้องการเปลี่ยน icon → แก้ name="..." ใน <MaterialCommunityIcons>
+ *
+ * Feature cards:
+ *   Mood Tracker → goMood()   → /moodtracker
+ *   Journal      → goJournal()→ /journal
+ *   Breathing    → goBreathing() → /breathing
+ *   Emergency    → handleEmergencyCall() → Linking.openURL('tel:...')
+ */
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,8 +25,6 @@ import {
   Alert,
   ScrollView,
   Image,
-  ImageBackground,
-  Platform,
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,10 +32,9 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from '@react-navigation/native';
 
-import { useTheme } from '../context/theme-context';
-import { useLanguage } from '../context/language-context';
+import { useTheme } from '@/context/theme-context';
+import { useLanguage } from '@/context/language-context';
 
 const STRINGS = {
   en: {
@@ -29,22 +44,22 @@ const STRINGS = {
     signOutConfirm: "Are you sure you want to sign out?",
     cancel: "Cancel",
     howFeeling: "How are you feeling?",
-    recently: "Quick actions",
+    recently: "Feature",
     favorites: "More",
     express: "Express your feelings",
-    moodCheckinChip: "Mood Check-in",
-    moodCheckinTitle: "🧠 Mood Check-in",
-    moodCheckinSub: "Pick mood, reason, quick note",
     resources: "Crisis Resources",
-    crisisMode: "Crisis mode",
-    crisisTitle: "Get help now",
-    crisisSub: "Hotlines & emergency support",
-    crisisMissingTitle: "Crisis mode",
-    crisisMissingBody: "No emergency number set. Add one in Settings.",
-    crisisGoSettings: "Go to Settings",
-    crisisCallFailed: "Unable to start the call.",
-    crisisCallUnsupported: "Calling is not supported on web.",
     settings: "Settings",
+    moodTracker: "Mood Tracker",
+    moodTrackerSub: "Log & track your daily mood",
+    journal: "Journal",
+    journalSub: "Write your thoughts & feelings",
+    breathing: "Breathing",
+    breathingSub: "Calm your mind with guided breathing",
+    langLabel: "EN",
+    emergencyCall: "Emergency Call",
+    emergencyCallSub: "Call your emergency contact",
+    emergencyNoNumber: "No emergency contact set",
+    emergencyNoNumberMsg: "Please set an emergency contact number in Settings first.",
   },
   th: {
     greeting: "สวัสดีตอนบ่าย,",
@@ -56,30 +71,28 @@ const STRINGS = {
     recently: "เมนูแนะนำ",
     favorites: "เมนูเพิ่มเติม",
     express: "ระบายความในใจ",
-    moodCheckinChip: "Mood Check-in",
-    moodCheckinTitle: "🧠 1. Mood Check-in รายวัน",
-    moodCheckinSub: "เลือกอารมณ์ เหตุผล และโน้ตสั้น ๆ",
     resources: "แหล่งช่วยเหลือฉุกเฉิน",
-    crisisMode: "โหมดฉุกเฉิน",
-    crisisTitle: "ขอความช่วยเหลือทันที",
-    crisisSub: "สายด่วนและช่องทางช่วยเหลือ",
-    crisisMissingTitle: "โหมดฉุกเฉิน",
-    crisisMissingBody: "ยังไม่ได้ตั้งค่าเบอร์ฉุกเฉิน ไปที่การตั้งค่าเพื่อเพิ่ม",
-    crisisGoSettings: "ไปที่การตั้งค่า",
-    crisisCallFailed: "ไม่สามารถเริ่มการโทรได้",
-    crisisCallUnsupported: "เว็บไม่รองรับการโทร",
     settings: "การตั้งค่า",
+    moodTracker: "ติดตาม Mood",
+    moodTrackerSub: "บันทึกและดู mood รายวัน",
+    journal: "บันทึก",
+    journalSub: "เขียนความคิดและความรู้สึก",
+    breathing: "หายใจผ่อนคลาย",
+    breathingSub: "ผ่อนคลายกับการฝึกหายใจ",
+    langLabel: "TH",
+    emergencyCall: "โทรฉุกเฉิน",
+    emergencyCallSub: "โทรหาผู้ติดต่อฉุกเฉินของคุณ",
+    emergencyNoNumber: "ยังไม่ได้ตั้งเบอร์ฉุกเฉิน",
+    emergencyNoNumberMsg: "กรุณาตั้งเบอร์ผู้ติดต่อฉุกเฉินในหน้าตั้งค่าก่อน",
   }
 };
-
-const EMERGENCY_NUMBER_KEY = 'emergency_number';
 
 export default function Home() {
   const router = useRouter();
   const [userName, setUserName] = useState('');
-  const { language } = useLanguage();
   const [emergencyNumber, setEmergencyNumber] = useState('');
-  const t = STRINGS[language];
+  const { lang } = useLanguage();
+  const t = STRINGS[lang];
   const { colors, colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
@@ -95,28 +108,15 @@ export default function Home() {
     const loadUserData = async () => {
       try {
         const name = await AsyncStorage.getItem('user_name');
+        const emergency = await AsyncStorage.getItem('emergency_contact_number');
         if (name) setUserName(name);
+        if (emergency) setEmergencyNumber(emergency);
       } catch (error) {
         console.log('Error loading user data:', error);
       }
     };
     loadUserData();
   }, []);
-
-  const loadEmergencyNumber = useCallback(async () => {
-    try {
-      const stored = await AsyncStorage.getItem(EMERGENCY_NUMBER_KEY);
-      setEmergencyNumber(stored ?? '');
-    } catch (error) {
-      console.log('Error loading emergency number:', error);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadEmergencyNumber();
-    }, [loadEmergencyNumber])
-  );
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -143,37 +143,16 @@ export default function Home() {
   const goChat = () => router.push('/chat' as any);
   const goResources = () => router.push('/resources' as any);
   const goSettings = () => router.push('/settings' as any);
-  const goMoodCheckin = () => router.push('/mood-checkin' as any);
+  const goMood = () => router.push('/moodtracker' as any);
+  const goJournal = () => router.push('/journal' as any);
+  const goBreathing = () => router.push('/breathing' as any);
 
-  const normalizePhoneNumber = (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-    const hasPlus = trimmed.startsWith('+');
-    const digits = trimmed.replace(/[^0-9]/g, '');
-    return hasPlus ? `+${digits}` : digits;
-  };
-
-  const handleCrisisModePress = async () => {
-    if (Platform.OS === 'web') {
-      Alert.alert(t.crisisMissingTitle, t.crisisCallUnsupported);
+  const handleEmergencyCall = () => {
+    if (!emergencyNumber) {
+      Alert.alert(t.emergencyNoNumber, t.emergencyNoNumberMsg);
       return;
     }
-
-    const normalized = normalizePhoneNumber(emergencyNumber);
-    if (!normalized) {
-      Alert.alert(t.crisisMissingTitle, t.crisisMissingBody, [
-        { text: t.cancel, style: 'cancel' },
-        { text: t.crisisGoSettings, onPress: goSettings },
-      ]);
-      return;
-    }
-
-    try {
-      await Linking.openURL(`tel:${normalized}`);
-    } catch (error) {
-      console.log('Error opening phone dialer:', error);
-      Alert.alert(t.crisisMissingTitle, t.crisisCallFailed);
-    }
+    Linking.openURL(`tel:${emergencyNumber}`);
   };
 
   const displayName = userName?.trim() ? userName : t.friend;
@@ -221,53 +200,63 @@ export default function Home() {
           {/* MAIN QUESTION PILL -> CHAT */}
           <TouchableOpacity onPress={goChat} activeOpacity={0.9} style={styles.feelPill}>
             <View style={styles.feelEmoji}>
-              <Text style={styles.feelEmojiText}>😊</Text>
+              <Text style={styles.feelEmojiText}>💬</Text>
             </View>
             <Text style={styles.feelText}>{t.howFeeling}</Text>
+          </TouchableOpacity>
+
+          {/* Emergency Call Button */}
+          <TouchableOpacity onPress={handleEmergencyCall} activeOpacity={0.9} style={styles.emergencyBtn}>
+            <View style={styles.emergencyIconWrap}>
+              <MaterialCommunityIcons name="phone-alert" size={22} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.emergencyTitle}>{t.emergencyCall}</Text>
+              <Text style={styles.emergencySub}>
+                {emergencyNumber ? emergencyNumber : t.emergencyCallSub}
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
 
           {/* SECTION: Quick actions (การ์ด 2 ใบเหมือนรูป) */}
           <Text style={styles.sectionTitle}>{t.recently}</Text>
 
-          <View style={styles.cardRow}>
-            {/* Card 1: Crisis */}
-            <TouchableOpacity onPress={handleCrisisModePress} activeOpacity={0.9} style={styles.bigCard}>
-              <ImageBackground
-                source={{ uri: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=60' }}
-                style={styles.bigCardImg}
-                imageStyle={styles.bigCardImgRadius}
-              >
-                <View style={[styles.cardChip, styles.cardChipDanger]}>
-                  <MaterialCommunityIcons name="alert-octagon" size={14} color={colors.textOnPrimary} />
-                  <Text style={styles.cardChipText}>{t.crisisMode}</Text>
-                </View>
+          {/* Mood Tracker card */}
+          <TouchableOpacity onPress={goMood} activeOpacity={0.88} style={styles.journalCard}>
+            <View style={[styles.journalIconWrap, { backgroundColor: 'rgba(34,197,94,0.18)' }]}>
+              <MaterialCommunityIcons name="emoticon-happy-outline" size={24} color="#22C55E" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.journalCardTitle}>{t.moodTracker}</Text>
+              <Text style={styles.journalCardSub}>{t.moodTrackerSub}</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color="rgba(34,197,94,0.7)" />
+          </TouchableOpacity>
 
-                <View style={styles.cardBottom}>
-                  <Text style={styles.cardTitle}>{t.crisisTitle}</Text>
-                  <Text style={styles.cardSub}>{t.crisisSub}</Text>
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
+          {/* Journal card */}
+          <TouchableOpacity onPress={goJournal} activeOpacity={0.88} style={styles.journalCard}>
+            <View style={[styles.journalIconWrap, { backgroundColor: 'rgba(108,99,255,0.18)' }]}>
+              <MaterialCommunityIcons name="notebook-edit-outline" size={24} color="#6C63FF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.journalCardTitle}>{t.journal}</Text>
+              <Text style={styles.journalCardSub}>{t.journalSub}</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color="rgba(108,99,255,0.7)" />
+          </TouchableOpacity>
 
-            {/* Card 2: Mood Check-in */}
-            <TouchableOpacity onPress={goMoodCheckin} activeOpacity={0.9} style={styles.bigCard}>
-              <ImageBackground
-                source={{ uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=60' }}
-                style={styles.bigCardImg}
-                imageStyle={styles.bigCardImgRadius}
-              >
-                <View style={styles.cardChip}>
-                  <MaterialCommunityIcons name="brain" size={14} color={colors.textOnPrimary} />
-                  <Text style={styles.cardChipText}>{t.moodCheckinChip}</Text>
-                </View>
-
-                <View style={styles.cardBottom}>
-                  <Text style={styles.cardTitle}>{t.moodCheckinTitle}</Text>
-                  <Text style={styles.cardSub}>{t.moodCheckinSub}</Text>
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
-          </View>
+          {/* Breathing card */}
+          <TouchableOpacity onPress={goBreathing} activeOpacity={0.88} style={styles.journalCard}>
+            <View style={[styles.journalIconWrap, { backgroundColor: 'rgba(6,182,212,0.18)' }]}>
+              <MaterialCommunityIcons name="weather-windy" size={24} color="#06B6D4" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.journalCardTitle}>{t.breathing}</Text>
+              <Text style={styles.journalCardSub}>{t.breathingSub}</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color="rgba(6,182,212,0.7)" />
+          </TouchableOpacity>
 
           {/* OPTIONAL: เมนูเพิ่มเติม (ถ้าต้องการเพิ่มภายหลัง) */}
           <Text style={[styles.sectionTitle, { marginTop: 22 }]}>{t.favorites}</Text>
@@ -281,11 +270,11 @@ export default function Home() {
             <MaterialCommunityIcons name="chevron-right" size={22} color={withAlpha(colors.textMuted, 0.8)} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleCrisisModePress} activeOpacity={0.9} style={styles.smallItem}>
+          <TouchableOpacity onPress={goResources} activeOpacity={0.9} style={styles.smallItem}>
             <View style={[styles.smallIcon, { backgroundColor: withAlpha(colors.danger, 0.18) }]}>
               <MaterialCommunityIcons name="shield-alert" size={18} color={colors.danger} />
             </View>
-            <Text style={styles.smallText}>{t.crisisMode}</Text>
+            <Text style={styles.smallText}>{t.resources}</Text>
             <MaterialCommunityIcons name="chevron-right" size={22} color={withAlpha(colors.textMuted, 0.8)} />
           </TouchableOpacity>
 
@@ -368,6 +357,21 @@ const createStyles = (colors: ThemeColors, isDark: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
+    },
+
+    langPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 999,
+      backgroundColor: withAlpha(colors.textOnPrimary, 0.18),
+    },
+    langText: {
+      color: withAlpha(colors.textOnPrimary, 0.9),
+      fontWeight: '700',
+      fontSize: 13,
     },
 
     iconBtn: {
@@ -486,9 +490,6 @@ const createStyles = (colors: ThemeColors, isDark: boolean) =>
       borderRadius: 999,
       backgroundColor: 'rgba(0,0,0,0.35)',
     },
-    cardChipDanger: {
-      backgroundColor: withAlpha(colors.danger, 0.4),
-    },
     cardChipText: {
       color: colors.textOnPrimary,
       fontSize: 12,
@@ -540,6 +541,41 @@ const createStyles = (colors: ThemeColors, isDark: boolean) =>
       fontWeight: '700',
     },
 
+    emergencyBtn: {
+      marginTop: 14,
+      backgroundColor: '#D7263D',
+      borderRadius: 18,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      shadowColor: '#D7263D',
+      shadowOpacity: 0.45,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6,
+    },
+    emergencyIconWrap: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.22)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emergencyTitle: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    emergencySub: {
+      color: 'rgba(255,255,255,0.78)',
+      fontSize: 13,
+      fontWeight: '600',
+      marginTop: 2,
+    },
+
     bottomBar: {
       position: 'absolute',
       left: 18,
@@ -564,6 +600,41 @@ const createStyles = (colors: ThemeColors, isDark: boolean) =>
       borderRadius: 18,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+
+    journalCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 16,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: colors.shadow,
+      shadowOpacity: 1,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 3,
+    },
+    journalIconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    journalCardTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    journalCardSub: {
+      color: colors.textMuted,
+      fontSize: 12,
+      fontWeight: '500',
+      marginTop: 2,
     },
   });
 

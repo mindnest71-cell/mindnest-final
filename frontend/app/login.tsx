@@ -1,3 +1,14 @@
+/**
+ * login.tsx — หน้า Login
+ *
+ * แก้ข้อความ → แก้ใน STRINGS.en / STRINGS.th ด้านล่าง
+ * API endpoint: POST /auth/login  (ดูที่ utils/api.js สำหรับ BASE_URL)
+ *
+ * AsyncStorage keys ที่บันทึกหลัง login สำเร็จ:
+ *   'user_id'    → ID ผู้ใช้ (ใช้เป็น auth token)
+ *   'user_name'  → ชื่อผู้ใช้ (แสดงใน home)
+ *   'user_email' → อีเมล
+ */
 import React, { useMemo, useState } from 'react';
 import {
   SafeAreaView,
@@ -12,12 +23,12 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import api from '../utils/api';
+import api from '@/utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { useTheme } from '../context/theme-context';
+import { useTheme } from '@/context/theme-context';
 
 const STRINGS = {
   en: {
@@ -84,6 +95,7 @@ export default function LoginScreen() {
       if (res.data.user_id) {
         await AsyncStorage.setItem('user_id', res.data.user_id);
         if (res.data.name) await AsyncStorage.setItem('user_name', res.data.name);
+        await AsyncStorage.setItem('user_email', email.trim());
         router.replace('/home');
       } else {
         Alert.alert('Error', 'No user ID received');

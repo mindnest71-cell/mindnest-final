@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { useTheme } from '../context/theme-context';
+import { useTheme } from '@/context/theme-context';
 
 const STORAGE_MINUTES_KEY = 'session_length_minutes';
 const STORAGE_NOTIFICATION_KEY = 'session_length_notification_id';

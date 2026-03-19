@@ -1,11 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import api from '../utils/api';
+import axios from 'axios';
 
 import ChatHeader from '../components/ChatHeader';
 import MessageBubble from '../components/MessageBubble';
 import ChatInput from '../components/ChatInput';
+
+const getApiUrl = () => {
+    if (Platform.OS === 'android') {
+        return 'http://10.0.2.2:8000/chat';
+    }
+    return 'http://localhost:8000/chat';
+};
+
+const API_URL = getApiUrl();
 
 const ChatScreenContent = () => {
     const insets = useSafeAreaInsets();
@@ -33,7 +42,7 @@ const ChatScreenContent = () => {
         setLoading(true);
 
         try {
-            const response = await api.post('/chat', { message: text });
+            const response = await axios.post(API_URL, { message: text });
 
             const botMessage = {
                 id: (Date.now() + 1).toString(),

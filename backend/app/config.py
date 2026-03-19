@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
-from google import genai
+import google.generativeai as genai
 
 load_dotenv()
 
@@ -18,5 +18,4 @@ if not GEMINI_API_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Create a single genai Client for use across all services
-genai_client = genai.Client(api_key=GEMINI_API_KEY)
+genai.configure(api_key=GEMINI_API_KEY)

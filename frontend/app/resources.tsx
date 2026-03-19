@@ -1,27 +1,67 @@
+/**
+ * resources.tsx — หน้าแหล่งช่วยเหลือฉุกเฉิน (Crisis Resources)
+ *
+ * API endpoint: GET /resources/?language=en|th
+ *   → โหลดจาก backend ก่อน ถ้า fail จะใช้ FALLBACK_RESOURCES แทน
+ *
+ * แก้ชื่อหัวข้อหน้า → แก้ที่ <Text style={styles.headerTitle}>Crisis Resources</Text>
+ * แก้ปุ่มภาษา (English / ภาษาไทย) → แก้ใน <Text> ใน languageToggle section
+ *
+ * ResourceItem fields ที่แสดง:
+ *   name, description, phone (ถ้ามี), website (ถ้ามี)
+ *   → ปุ่ม Call / Website จะปรากฏเฉพาะเมื่อมีข้อมูล
+ */
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import api from '../utils/api';
+import api from '@/utils/api';
 
-import { useTheme } from '../context/theme-context';
-import { useLanguage } from '../context/language-context';
+import { useTheme } from '@/context/theme-context';
 
 type ResourceItem = {
   id?: string;
   name: string;
   description: string;
-  phone?: string;
+  phone?: string | null;
   website?: string;
   available_hours?: string;
+};
+
+const FALLBACK_RESOURCES: Record<'en' | 'th', ResourceItem[]> = {
+  en: [
+    { name: 'Department of Mental Health Hotline (1323)', phone: '1323', website: 'https://www.dmh.go.th', description: 'The official government mental health hotline providing free, 24/7 consultation for stress, depression, and mental health issues.', available_hours: '24/7' },
+    { name: 'Medical Emergency Hotline (1669)', phone: '1669', website: 'https://www.niems.go.th', description: 'The national emergency number for ambulance and medical rescue services in life-threatening situations.', available_hours: '24/7' },
+    { name: 'Social Assistance Center (1300)', phone: '1300', website: 'https://www.m-society.go.th', description: 'Operated by the Ministry of Social Development and Human Security, this hotline helps with domestic violence, human trafficking, and child protection issues.', available_hours: '24/7' },
+    { name: 'Depress We Care', phone: '081-932-0000', website: 'https://www.facebook.com/DepressWeCare', description: 'A specialized service by the Police General Hospital providing support for depression and mental health issues.', available_hours: '24/7' },
+    { name: 'Childline Thailand', phone: '1387', website: 'https://childlinethailand.org', description: 'A dedicated hotline for children and youth under 18 to discuss family problems, abuse, or mental health concerns safely and confidentially.', available_hours: '24/7' },
+    { name: 'Manarom Hospital Crisis Center', phone: '02-725-9595', website: 'https://www.manarom.com', description: 'A private specialized mental health hospital offering comprehensive psychiatric care and emergency services.', available_hours: '24/7 (Emergency Services)' },
+    { name: 'Samaritans of Thailand', phone: '02-113-6789', website: 'https://www.facebook.com/Samaritans.Thailand', description: 'A non-profit organization providing anonymous, confidential emotional support for those feeling depressed, lonely, or suicidal.', available_hours: '12:00 PM - 10:00 PM (Daily)' },
+    { name: 'Sati App', phone: null, website: 'https://www.satiapp.co', description: 'An on-demand listening service app that connects users with trained empathetic listeners for anonymous emotional support.', available_hours: '24/7' },
+    { name: 'Bumrungrad Behavioral Health Center', phone: '02-011-4090', website: 'https://www.bumrungrad.com/en/centers/behavioral-health-center', description: 'A premium medical center providing holistic mental health care, counselling, and psychiatric treatment for adults and children.', available_hours: '08:00 AM - 08:00 PM' },
+    { name: 'Bangkok Counselling Service', phone: '02-286-1352', website: 'https://bangkokcounsellingservice.com', description: 'Provides psychological counseling and psychotherapy for individuals, couples, and families.', available_hours: 'By Appointment' },
+  ],
+  th: [
+    { name: 'สายด่วนสุขภาพจิต (1323)', phone: '1323', website: 'https://www.dmh.go.th', description: 'สายด่วนสุขภาพจิตอย่างเป็นทางการของกรมสุขภาพจิต ให้บริการปรึกษาปัญหาความเครียด ภาวะซึมเศร้า และสุขภาพจิตทุกประเภทฟรีตลอด 24 ชั่วโมง', available_hours: '24/7' },
+    { name: 'สายด่วนฉุกเฉินทางการแพทย์ (1669)', phone: '1669', website: 'https://www.niems.go.th', description: 'หมายเลขฉุกเฉินระดับชาติสำหรับรถพยาบาลและบริการกู้ภัยทางการแพทย์ในสถานการณ์ที่เป็นอันตรายถึงชีวิต', available_hours: '24/7' },
+    { name: 'สายด่วนช่วยเหลือสังคม (1300)', phone: '1300', website: 'https://www.m-society.go.th', description: 'ดำเนินการโดยกระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์ ให้ความช่วยเหลือด้านความรุนแรงในครอบครัว การค้ามนุษย์ และการคุ้มครองเด็ก', available_hours: '24/7' },
+    { name: 'Depress We Care', phone: '081-932-0000', website: 'https://www.facebook.com/DepressWeCare', description: 'บริการเฉพาะทางของโรงพยาบาลตำรวจ ให้การสนับสนุนด้านภาวะซึมเศร้าและปัญหาสุขภาพจิต', available_hours: '24/7' },
+    { name: 'ChildLine Thailand (1387)', phone: '1387', website: 'https://childlinethailand.org', description: 'สายด่วนเฉพาะสำหรับเด็กและเยาวชนอายุต่ำกว่า 18 ปี เพื่อพูดคุยเรื่องปัญหาครอบครัวหรือความกังวลด้านสุขภาพจิตอย่างปลอดภัย', available_hours: '24/7' },
+    { name: 'โรงพยาบาลมนารมย์ ศูนย์วิกฤต', phone: '02-725-9595', website: 'https://www.manarom.com', description: 'โรงพยาบาลเฉพาะทางด้านสุขภาพจิตเอกชนที่ให้บริการจิตเวชครบวงจรและบริการฉุกเฉิน', available_hours: '24/7 (บริการฉุกเฉิน)' },
+    { name: 'Samaritans of Thailand', phone: '02-113-6789', website: 'https://www.facebook.com/Samaritans.Thailand', description: 'องค์กรไม่แสวงหากำไรที่ให้การสนับสนุนทางอารมณ์แบบไม่ระบุชื่อและเป็นความลับสำหรับผู้ที่รู้สึกหดหู่ โดดเดี่ยว หรือมีความคิดอยากทำร้ายตนเอง', available_hours: '12:00 - 22:00 (ทุกวัน)' },
+    { name: 'Sati App', phone: null, website: 'https://www.satiapp.co', description: 'แอปพลิเคชันบริการรับฟังออนดีมานด์ที่เชื่อมต่อผู้ใช้กับนักฟังที่ผ่านการฝึกอบรมเพื่อสนับสนุนทางอารมณ์แบบไม่ระบุชื่อ', available_hours: '24/7' },
+    { name: 'ศูนย์สุขภาพจิตโรงพยาบาลบำรุงราษฎร์', phone: '02-011-4090', website: 'https://www.bumrungrad.com/en/centers/behavioral-health-center', description: 'ศูนย์การแพทย์ชั้นนำที่ให้บริการดูแลสุขภาพจิตแบบองค์รวม การให้คำปรึกษา และการรักษาทางจิตเวช', available_hours: '08:00 - 20:00' },
+    { name: 'Bangkok Counselling Service', phone: '02-286-1352', website: 'https://bangkokcounsellingservice.com', description: 'ให้บริการคำปรึกษาทางจิตวิทยาและจิตบำบัดสำหรับบุคคล คู่รัก และครอบครัว', available_hours: 'นัดหมายล่วงหน้า' },
+  ],
 };
 
 export default function Resources() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const { language } = useLanguage();
+  const [language, setLanguage] = useState<'en' | 'th'>('en');
   const [resources, setResources] = useState<ResourceItem[]>([]);
+  const [usingFallback, setUsingFallback] = useState(false);
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -33,11 +73,17 @@ export default function Resources() {
     setLoading(true);
     try {
       const response = await api.get(`/resources/?language=${language}`);
-      const data = Array.isArray(response.data) ? response.data : [];
-      setResources(data);
-    } catch (error) {
-      console.log('Error fetching resources:', error);
-      setResources([]);
+      const data = Array.isArray(response.data) && response.data.length > 0 ? response.data : null;
+      if (data) {
+        setResources(data);
+        setUsingFallback(false);
+      } else {
+        setResources(FALLBACK_RESOURCES[language]);
+        setUsingFallback(true);
+      }
+    } catch {
+      setResources(FALLBACK_RESOURCES[language]);
+      setUsingFallback(true);
     } finally {
       setLoading(false);
     }
@@ -97,6 +143,32 @@ export default function Resources() {
         <View style={{ width: 40 }} />
       </View>
 
+      <View style={styles.languageToggleContainer}>
+        <View style={styles.languageToggle}>
+          <TouchableOpacity
+            style={[styles.langBtn, language === 'en' && styles.langBtnActive]}
+            onPress={() => setLanguage('en')}
+          >
+            <Text style={[styles.langText, language === 'en' && styles.langTextActive]}>English</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.langBtn, language === 'th' && styles.langBtnActive]}
+            onPress={() => setLanguage('th')}
+          >
+            <Text style={[styles.langText, language === 'th' && styles.langTextActive]}>ภาษาไทย</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {usingFallback && !loading && (
+        <View style={styles.fallbackBanner}>
+          <MaterialCommunityIcons name="wifi-off" size={15} color={colors.textMuted} />
+          <Text style={styles.fallbackText}>
+            {language === 'th' ? 'แสดงข้อมูลสำรอง (ออฟไลน์)' : 'Showing offline data'}
+          </Text>
+        </View>
+      )}
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -153,6 +225,45 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface2,
+    },
+
+    languageToggleContainer: {
+      paddingHorizontal: 18,
+      paddingTop: 14,
+      paddingBottom: 6,
+      backgroundColor: 'transparent',
+    },
+
+    languageToggle: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+
+    langBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 12,
+    },
+
+    langBtnActive: {
+      backgroundColor: withAlpha(colors.primary, 0.12),
+      borderWidth: 1,
+      borderColor: withAlpha(colors.primary, 0.3),
+    },
+
+    langText: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: colors.textMuted,
+    },
+
+    langTextActive: {
+      color: colors.primary,
     },
 
     loadingContainer: {
@@ -247,6 +358,24 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.textMuted,
       fontSize: 15,
       fontWeight: '800',
+    },
+
+    fallbackBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginHorizontal: 18,
+      marginTop: 10,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      backgroundColor: withAlpha(colors.textMuted, 0.1),
+    },
+
+    fallbackText: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontWeight: '600',
     },
   });
 

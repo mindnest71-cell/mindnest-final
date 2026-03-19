@@ -13,11 +13,11 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import api from '../utils/api';
+import api from '@/utils/api';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { useTheme } from '../context/theme-context';
+import { useTheme } from '@/context/theme-context';
 
 const STRINGS = {
   en: {

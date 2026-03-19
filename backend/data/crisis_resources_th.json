@@ -1,0 +1,102 @@
+[
+  {
+    "name": "สายด่วนสุขภาพจิต (1323)",
+    "country": "Thailand",
+    "phone": "1323",
+    "website": "https://www.dmh.go.th",
+    "description": "สายด่วนสุขภาพจิตอย่างเป็นทางการของกรมสุขภาพจิต ให้บริการปรึกษาปัญหาความเครียด ภาวะซึมเศร้า และสุขภาพจิตทุกประเภทฟรีตลอด 24 ชั่วโมง",
+    "available_hours": "24/7",
+    "company_lang": "ไทย",
+    "language": "th"
+  },
+  {
+    "name": "สายด่วนช่วยเหลือสังคม (1300)",
+    "country": "Thailand",
+    "phone": "1300",
+    "website": "https://www.m-society.go.th",
+    "description": "ดำเนินการโดยกระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์ ให้ความช่วยเหลือด้านความรุนแรงในครอบครัว การค้ามนุษย์ และการคุ้มครองเด็ก",
+    "available_hours": "24/7",
+    "company_lang": "ไทย",
+    "language": "th"
+  },
+  {
+    "name": "Samaritans of Thailand",
+    "country": "Thailand",
+    "phone": "02-113-6789",
+    "website": "https://www.facebook.com/Samaritans.Thailand",
+    "description": "องค์กรไม่แสวงหากำไรที่ให้การสนับสนุนทางอารมณ์แบบไม่ระบุชื่อและเป็นความลับสำหรับผู้ที่รู้สึกหดหู่ โดดเดี่ยว หรือมีความคิดอยากทำร้ายตนเอง",
+    "available_hours": "12:00 - 22:00 (ทุกวัน)",
+    "company_lang": "ไทย, อังกฤษ",
+    "language": "th"
+  },
+  {
+    "name": "Depress We Care",
+    "country": "Thailand",
+    "phone": "081-932-0000",
+    "website": "https://www.facebook.com/DepressWeCare",
+    "description": "บริการเฉพาะทางของโรงพยาบาลตำรวจ ให้การสนับสนุนด้านภาวะซึมเศร้าและปัญหาสุขภาพจิตสำหรับเจ้าหน้าที่ตำรวจและประชาชนทั่วไป",
+    "available_hours": "24/7",
+    "company_lang": "ไทย",
+    "language": "th"
+  },
+  {
+    "name": "ChildLine Thailand (1387)",
+    "country": "Thailand",
+    "phone": "1387",
+    "website": "https://childlinethailand.org",
+    "description": "สายด่วนเฉพาะสำหรับเด็กและเยาวชนอายุต่ำกว่า 18 ปี เพื่อพูดคุยเรื่องปัญหาครอบครัว การถูกกระทำทารุณกรรม หรือความกังวลด้านสุขภาพจิตอย่างปลอดภัยและเป็นความลับ",
+    "available_hours": "24/7",
+    "company_lang": "ไทย, อังกฤษ",
+    "language": "th"
+  },
+  {
+    "name": "โรงพยาบาลมนารมย์ ศูนย์วิกฤต",
+    "country": "Thailand",
+    "phone": "02-725-9595",
+    "website": "https://www.manarom.com",
+    "description": "โรงพยาบาลเฉพาะทางด้านสุขภาพจิตเอกชนที่ให้บริการจิตเวชครบวงจรและบริการฉุกเฉิน",
+    "available_hours": "24/7 (บริการฉุกเฉิน)",
+    "company_lang": "ไทย, อังกฤษ",
+    "language": "th"
+  },
+  {
+    "name": "Sati App",
+    "country": "Thailand",
+    "phone": null,
+    "website": "https://www.satiapp.co",
+    "description": "แอปพลิเคชันบริการรับฟังออนดีมานด์ที่เชื่อมต่อผู้ใช้กับนักฟังที่ผ่านการฝึกอบรมเพื่อสนับสนุนทางอารมณ์แบบไม่ระบุชื่อ",
+    "available_hours": "24/7",
+    "company_lang": "ไทย, อังกฤษ",
+    "language": "th"
+  },
+  {
+    "name": "สายด่วนฉุกเฉินทางการแพทย์ (1669)",
+    "country": "Thailand",
+    "phone": "1669",
+    "website": "https://www.niems.go.th",
+    "description": "หมายเลขฉุกเฉินระดับชาติสำหรับรถพยาบาลและบริการกู้ภัยทางการแพทย์ในสถานการณ์ที่เป็นอันตรายถึงชีวิต",
+    "available_hours": "24/7",
+    "company_lang": "ไทย",
+    "language": "th"
+  },
+  {
+    "name": "ศูนย์สุขภาพจิตโรงพยาบาลบำรุงราษฎร์",
+    "country": "Thailand",
+    "phone": "02-011-4090",
+    "website": "https://www.bumrungrad.com/en/centers/behavioral-health-center",
+    "description": "ศูนย์การแพทย์ชั้นนำที่ให้บริการดูแลสุขภาพจิตแบบองค์รวม การให้คำปรึกษา และการรักษาทางจิตเวชสำหรับผู้ใหญ่และเด็ก",
+    "available_hours": "08:00 - 20:00",
+    "company_lang": "ไทย, อังกฤษ, มีล่ามภาษา",
+    "language": "th"
+  },
+  {
+    "name": "Bangkok Counselling Service",
+    "country": "Thailand",
+    "phone": "02-286-1352",
+    "website": "https://bangkokcounsellingservice.com",
+    "description": "ให้บริการคำปรึกษาทางจิตวิทยาและจิตบำบัดสำหรับบุคคล คู่รัก และครอบครัว เชี่ยวชาญด้านชุมชนชาวต่างชาติ",
+    "available_hours": "นัดหมายล่วงหน้า",
+    "company_lang": "อังกฤษ, ไทย",
+    "language": "th"
+  }
+]

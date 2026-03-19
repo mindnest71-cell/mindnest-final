@@ -1,17 +1,35 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+/**
+ * chat.tsx — หน้า Chat กับ Bobby (AI)
+ *
+ * API endpoints:
+ *   GET  /chat/history → โหลดประวัติแชทจาก server
+ *   POST /chat         → ส่งข้อความ, รับ response จาก Bobby
+ *
+ * AsyncStorage key: 'chat_history' → backup ประวัติแชทในเครื่อง (fallback)
+ *
+ * Notification: หลังส่งข้อความทุกครั้ง จะ schedule notification หลัง 5 นาที
+ *   → แก้เวลา: scheduleFollowUpNotification() → เปลี่ยน seconds: 5 * 60
+ *   → แก้ข้อความ notification: แก้ title/body ใน scheduleFollowUpNotification()
+ *
+ * Bobby name: แก้ได้ที่ <TypingIndicator name="Bobby" /> และใน notification content
+ *
+ * ประวัติแชทถูกลบได้จาก Settings → Clear Chat History
+ */
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useFocusEffect } from '@react-navigation/native';
 
-import api from '../utils/api';
-import ChatHeader from '../components/ChatHeader';
-import MessageBubble from '../components/MessageBubble';
-import ChatInput from '../components/ChatInput';
+import api from '@/utils/api';
+import ChatHeader from '@/components/ChatHeader';
+import MessageBubble from '@/components/MessageBubble';
+import ChatInput from '@/components/ChatInput';
 
-import { useTheme } from '../context/theme-context';
+import { useTheme } from '@/context/theme-context';
 
 type ChatMessage = {
   id: string;
@@ -26,17 +44,6 @@ type ChatMessage = {
   date?: string;
   dateKey?: string;
   dateLabel?: string;
-};
-
-type CreateMessageInput = {
-  id: string;
-  text: string;
-  isUser: boolean;
-  date: Date;
-  techniques?: unknown[];
-  crisis_resources?: unknown[];
-  severity?: string;
-  quotes?: unknown[];
 };
 
 type DateListItem = {
@@ -59,36 +66,12 @@ const formatDateLabel = (date: Date) =>
 
 const getDateKey = (date: Date) => date.toISOString().split('T')[0];
 
-const formatTimestamp = (date: Date) =>
-  date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-const createChatMessage = ({
-  id,
-  text,
-  isUser,
-  date,
-  techniques = [],
-  crisis_resources = [],
-  severity = '',
-  quotes = [],
-}: CreateMessageInput): ChatMessage => ({
-  id,
-  text,
-  isUser,
-  techniques,
-  crisis_resources,
-  severity,
-  quotes,
-  timestamp: formatTimestamp(date),
-  dateKey: getDateKey(date),
-  dateLabel: formatDateLabel(date),
-});
-
 const normalizeMessageDate = (message: ChatMessage) => {
   if (message.dateKey && message.dateLabel) return message;
   const dateSource = message.timestamp_iso || message.date;
   const dateValue = dateSource ? new Date(dateSource) : new Date();
-  const timestamp = message.timestamp || formatTimestamp(dateValue);
+  const timestamp = message.timestamp
+    || dateValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return {
     ...message,
     timestamp,
@@ -98,6 +81,22 @@ const normalizeMessageDate = (message: ChatMessage) => {
 };
 
 const CHAT_HISTORY_KEY = 'chat_history';
+
+const createDefaultWelcomeMessage = (): ChatMessage => {
+  const now = new Date();
+  return {
+    id: '1',
+    text: "Hello! I'm here to provide support.\nHow are you feeling today?",
+    isUser: false,
+    techniques: [],
+    crisis_resources: [],
+    severity: '',
+    quotes: [],
+    timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    dateKey: getDateKey(now),
+    dateLabel: formatDateLabel(now),
+  };
+};
 
 if (Platform.OS !== 'web' && Notifications.setNotificationHandler) {
   Notifications.setNotificationHandler({
@@ -169,9 +168,12 @@ const ChatScreenContent = () => {
   const flatListRef = useRef<FlatList<ListItem>>(null);
   const notificationIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    fetchHistory();
-  }, []);
+  // Reload history every time the screen gains focus (e.g. after deleting from settings)
+  useFocusEffect(
+    useCallback(() => {
+      fetchHistory();
+    }, [])
+  );
 
   useEffect(() => {
     const requestNotificationPermissions = async () => {
@@ -236,58 +238,67 @@ const ChatScreenContent = () => {
           setMessages(localHistory);
           return;
         }
-        const now = new Date();
-        setMessages([
-          createChatMessage({
-            id: '1',
-            text: "Hello! I'm here to provide support.\nHow are you feeling today?",
-            isUser: false,
-            date: now,
-          }),
-        ]);
+        setMessages([createDefaultWelcomeMessage()]);
       }
     } catch (e) {
       console.log('Error fetching history:', e);
       const localHistory = await loadLocalHistory();
-      if (localHistory.length > 0) setMessages(localHistory);
+      if (localHistory.length > 0) {
+        setMessages(localHistory);
+      } else {
+        setMessages([createDefaultWelcomeMessage()]);
+      }
     }
   };
 
   const sendMessage = async (text: string) => {
     const now = new Date();
-    const baseId = Date.now();
-    const userMessage = createChatMessage({
-      id: baseId.toString(),
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
       text,
       isUser: true,
-      date: now,
-    });
+      techniques: [],
+      crisis_resources: [],
+      severity: '',
+      quotes: [],
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateKey: getDateKey(now),
+      dateLabel: formatDateLabel(now),
+    };
 
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
 
     try {
       const response = await api.post('/chat', { message: text });
-      const botMessage = createChatMessage({
-        id: (baseId + 1).toString(),
+      const botMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
         text: response.data.response,
         techniques: response.data.techniques,
         crisis_resources: response.data.crisis_resources,
         severity: response.data.severity,
         quotes: response.data.quotes,
         isUser: false,
-        date: now,
-      });
+        timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        dateKey: getDateKey(now),
+        dateLabel: formatDateLabel(now),
+      };
       setMessages((prev) => [...prev, botMessage]);
       await scheduleFollowUpNotification();
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage = createChatMessage({
-        id: (baseId + 1).toString(),
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
         text: "I'm having trouble connecting right now. Please try again.",
         isUser: false,
-        date: now,
-      });
+        techniques: [],
+        crisis_resources: [],
+        severity: '',
+        quotes: [],
+        timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        dateKey: getDateKey(now),
+        dateLabel: formatDateLabel(now),
+      };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
