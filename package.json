@@ -1,0 +1,29 @@
+{
+  "name": "mindnest_unified",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mindnest71-cell/mindnest.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mindnest71-cell/mindnest/issues"
+  },
+  "homepage": "https://github.com/mindnest71-cell/mindnest#readme",
+  "dependencies": {
+    "expo": "^54.0.32",
+    "expo-blur": "~15.0.8"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
+  }
+}

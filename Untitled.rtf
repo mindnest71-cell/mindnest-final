@@ -1,0 +1,125 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2867
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 .AppleSystemUIFontMonospaced-Regular;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red133\green136\blue152;\red132\green135\blue152;
+\red133\green136\blue152;\red132\green135\blue152;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;\cssrgb\c59220\c60419\c66006;\cssrgb\c59022\c60210\c65945;
+\cssrgb\c59220\c60419\c66006;\cssrgb\c59022\c60210\c65945;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 1. How does the AI Chat Work?\
+\
+Mindnest uses a combination of RAG and LLM to generate the appropriate reply for the user.\
+\
+Firstly there is a simple LLM that just returns a boolean to recognize whether the prompt is in Thai language or\
+English language. Then there is severity classification that is also classified by the LLM and classifies the prompt to see whether the prompt is LOW, MODERATE, HIGH, CRISIS. The prompt is then turned into a semantic vector, which is a high dimensional mathematical vector (this is the embedding)\
+\
+The prompt semantic vector is matched with the metal health technique semantic vector that is already embedded using text-gemini-embedding-004. The most matching (top 5) mental health techniques are retrieved and returned to the user as cards.\
+\
+LLM used is gemini 2.5 flash that generates a short conversational response along with the mental health techniques. These are all returned as strict JSON format, which contains the text, the mental health technique text with instructions which is then turned into cards.\
+\
+2. How is it different from a normal chatbot?\
+\
+A standard chatbot only uses LLM to generate the responses. But Mindnest has LLM to categorize the prompt from the user and then generates a conversational reply, and the actual mental health techniques are already embedded into the database and this allows the Llm to not hallucinate like other chatbots as it has its own latent knowledge base.\
+\
+This AI does not roam freely around the internet or a full knowledge base for the response, it is only constrained within the knowledge base that is already in the database, for domain specific accuracy.\
+\
+3. How does the RAG work?\
+\
+The data base is in Supabase as a PostgreSQL and is used with pgVector the vectorization, this allows it to store and query high dimensional floating point arrays. The embedding converts a sentence like \'93I am anxious what should I do?\'94 To an array with 768 numbers [0.55,-.22,0.81,\'85\'85]\
+\
+The system uses a Remote Procedure Call in Suppose called match_techniques which means it takes in the prompt from the user and vectorizes that and then compares it mathematically to all the stored vectors of the mental health techniques in the database\
+\
+It enforces language match, and has a strict similarity threshold set at 0.35\
+\
+Cosine similarity is used in the RAG matching. This is because it is better than euclidean distance mactching since there are multi-dimensional vectors instead of 2D vectors.\
+\
+4. Why use RAG + LLM?\
+\
+Hallucination of AI is greatly reduced because of RAG + LLM and relying only on Llm would make the LLM hallucinate after many prompts and answer questions out of the scope of the application. RAG provides the facts and the LLM gives the feeling to the responses.\
+\
+\
+Backend used is python + FastAPI because it works great with Google GenAI SDKs and is asynchronous and usually for AI and ML tasks, python is better than other coding languages.\
+\
+\
+5. How are the embeddings done? \
+\
+It is embedded as \'93Title + Symptoms\'94 for example: \
+\
+\'93
+\f1\fs23\fsmilli11707 \cf2 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 Box Breathing I am overwhelmed stress is too high can't focus panicking hyperventilating need to calm down fast freaking out\'94\
+\
+And in Thai: \
+\strokec4 "\uc0\u3585 \u3634 \u3619 \u3627 \u3634 \u3618 \u3651 \u3592 \u3649 \u3610 \u3610 \u3585 \u3621 \u3656 \u3629 \u3591  (Box Breathing) \u3626 \u3605 \u3636 \u3649 \u3605 \u3585  \u3648 \u3588 \u3619 \u3637 \u3618 \u3604 \u3621 \u3591 \u3585 \u3619 \u3632 \u3648 \u3614 \u3634 \u3632  \u3588 \u3623 \u3610 \u3588 \u3640 \u3617 \u3605 \u3633 \u3623 \u3648 \u3629 \u3591 \u3652 \u3617 \u3656 \u3652 \u3604 \u3657  \u3605 \u3639 \u3656 \u3609 \u3648 \u3605 \u3657 \u3609  \u3617 \u3639 \u3629 \u3626 \u3633 \u3656 \u3609  \u3649 \u3614 \u3609 \u3636 \u3588 \'94\
+\
+Now mathematically the symptoms and the mental health technique (Title: Box Breathing\'94) will be vectorized in the same space and hence these symptoms that are best removed by box breathing will be easy to retrieve by the RAG. Then the Title is mapped to the Title in the actual PostgreSQL and the instructions are retrieved from there.\
+\
+So each mental health technique and its symptoms cover the same mathematical space for the best metal health technique to be retrieved for each symptom or set of symptoms.\
+\
+The cosine similarity matches the \'93I am overwhelmed\'94 from the user with the vectorized space of \'93
+\fs23\fsmilli11707 \outl0\strokewidth0 Box Breathing I am overwhelmed stress\'94 or "\uc0\u3585 \u3634 \u3619 \u3627 \u3634 \u3618 \u3651 \u3592 \u3649 \u3610 \u3610 \u3585 \u3621 \u3656 \u3629 \u3591  (Box Breathing) \u3626 \u3605 \u3636 \u3649 \u3605 \u3585  \u3648 \u3588 \u3619 \u3637 \u3618 \u3604 \u3621 \u3591 \u3585 \u3619 \u3632 \u3648 \u3614 \u3634 \u3632 \'94 if in Thai and it will bring this result as the highest match, But since similar symptoms might be covered by different mental health techniques, it retrieves the top 5 most similar matches. \
+\
+There are 102 total mental health techniques (51 in English and 51 in Thai) and in the format:\
+\{"idx":1,\
+\
+"id":155,\
+"title":"Box Breathing",\
+\
+"category":"breathing",\
+\
+"target_symptoms":["panic","stress","overwhelm","loss of focus"],\
+\
+"content":"A technique used by Navy SEALs to regain control of the stress response by regulating the breath in equal segments.","instructions":["Inhale through your nose for 4 seconds.","Hold your breath for 4 seconds.","Exhale through your mouth for 4 seconds.","Hold your breath for 4 seconds.","Repeat for 4 cycles."],\
+\
+"when_to_use":"Before a high-pressure event or when feeling scattered.",\
+\
+"embedding_text":"Box Breathing I am overwhelmed stress is too high can't focus panicking hyperventilating need to calm down fast freaking out",\
+\
+"embedding":"[-0.0039515053,-0.011812744,\
+0.029378409,-0.011150117,0.0040494488,0.007381736,-0.016210765,-0.0129138995,0.020712648]",\
+\
+"source":"Tactical Breathing / CBT",\
+\
+"language":"en"\}\
+\
+\
+\{"idx":52,\
+\
+"id":206,\
+\
+"title":"\uc0\u3585 \u3634 \u3619 \u3627 \u3634 \u3618 \u3651 \u3592 \u3649 \u3610 \u3610 \u3585 \u3621 \u3656 \u3629 \u3591  (Box Breathing)",\
+\
+"category":"breathing",\
+\
+"target_symptoms":["\uc0\u3649 \u3614 \u3609 \u3636 \u3588 ","\u3648 \u3588 \u3619 \u3637 \u3618 \u3604 ","\u3619 \u3633 \u3610 \u3652 \u3617 \u3656 \u3652 \u3627 \u3623 ","\u3586 \u3634 \u3604 \u3626 \u3617 \u3634 \u3608 \u3636 "],\
+\
+"content":"\uc0\u3648 \u3607 \u3588 \u3609 \u3636 \u3588 \u3607 \u3637 \u3656 \u3627 \u3609 \u3656 \u3623 \u3618  Navy SEALs \u3651 \u3594 \u3657 \u3648 \u3614 \u3639 \u3656 \u3629 \u3588 \u3623 \u3610 \u3588 \u3640 \u3617 \u3585 \u3634 \u3619 \u3605 \u3629 \u3610 \u3626 \u3609 \u3629 \u3591 \u3605 \u3656 \u3629 \u3588 \u3623 \u3634 \u3617 \u3648 \u3588 \u3619 \u3637 \u3618 \u3604  \u3650 \u3604 \u3618 \u3585 \u3634 \u3619 \u3588 \u3623 \u3610 \u3588 \u3640 \u3617 \u3621 \u3617 \u3627 \u3634 \u3618 \u3651 \u3592 \u3651 \u3627 \u3657 \u3648 \u3611 \u3655 \u3609 \u3592 \u3633 \u3591 \u3627 \u3623 \u3632 \u3648 \u3607 \u3656 \u3634 \u3585 \u3633 \u3609 ","instructions":["\u3627 \u3634 \u3618 \u3651 \u3592 \u3648 \u3586 \u3657 \u3634 \u3607 \u3634 \u3591 \u3592 \u3617 \u3641 \u3585  4 \u3623 \u3636 \u3609 \u3634 \u3607 \u3637 ","\u3585 \u3621 \u3633 \u3657 \u3609 \u3627 \u3634 \u3618 \u3651 \u3592  4 \u3623 \u3636 \u3609 \u3634 \u3607 \u3637 ","\u3627 \u3634 \u3618 \u3651 \u3592 \u3629 \u3629 \u3585 \u3607 \u3634 \u3591 \u3611 \u3634 \u3585  4 \u3623 \u3636 \u3609 \u3634 \u3607 \u3637 ","\u3585 \u3621 \u3633 \u3657 \u3609 \u3627 \u3634 \u3618 \u3651 \u3592  4 \u3623 \u3636 \u3609 \u3634 \u3607 \u3637 ","\u3607 \u3635 \u3595 \u3657 \u3635  4 \u3619 \u3629 \u3610 "],"when_to_use":"\u3585 \u3656 \u3629 \u3609 \u3648 \u3592 \u3629 \u3626 \u3606 \u3634 \u3609 \u3585 \u3634 \u3619 \u3603 \u3660 \u3585 \u3604 \u3604 \u3633 \u3609 \u3627 \u3619 \u3639 \u3629 \u3648 \u3617 \u3639 \u3656 \u3629 \u3619 \u3641 \u3657 \u3626 \u3638 \u3585 \u3626 \u3605 \u3636 \u3649 \u3605 \u3585 ",\
+\
+"embedding_text":"\uc0\u3585 \u3634 \u3619 \u3627 \u3634 \u3618 \u3651 \u3592 \u3649 \u3610 \u3610 \u3585 \u3621 \u3656 \u3629 \u3591  (Box Breathing) \u3626 \u3605 \u3636 \u3649 \u3605 \u3585  \u3648 \u3588 \u3619 \u3637 \u3618 \u3604 \u3621 \u3591 \u3585 \u3619 \u3632 \u3648 \u3614 \u3634 \u3632  \u3588 \u3623 \u3610 \u3588 \u3640 \u3617 \u3605 \u3633 \u3623 \u3648 \u3629 \u3591 \u3652 \u3617 \u3656 \u3652 \u3604 \u3657  \u3605 \u3639 \u3656 \u3609 \u3648 \u3605 \u3657 \u3609  \u3617 \u3639 \u3629 \u3626 \u3633 \u3656 \u3609  \u3649 \u3614 \u3609 \u3636 \u3588 ",\
+\
+"embedding":"[0.0066229845,-0.022085577,-0.004761601,-0.04859386,-0.011349244,0.015355661,-0.014513116,-0.0029898419,-0.017192109,0.013068756,-0.02570799,-0.009931023,0.01505747,-0.008874701,0.116558515,-0.004894876,-0.012952464,0.030017905,-0.019319857,-0.019208545,0.010513547,-0.0039928383,0.0050720866,-0.03084722\'85..]\'94,\
+\
+\'94source":"Tactical Breathing / CBT",\
+\
+"language":"th"\}\
+\
+6. What is embedded and why?\
+\
+Embedded text in English for each: example: "embedding_text":"Box Breathing I am overwhelmed stress is too high can't focus panicking hyperventilating need to calm down fast freaking out",\
+\
+Embedded in Thai: "embedding_text":"\uc0\u3585 \u3634 \u3619 \u3627 \u3634 \u3618 \u3651 \u3592 \u3649 \u3610 \u3610 \u3585 \u3621 \u3656 \u3629 \u3591  (Box Breathing) \u3626 \u3605 \u3636 \u3649 \u3605 \u3585  \u3648 \u3588 \u3619 \u3637 \u3618 \u3604 \u3621 \u3591 \u3585 \u3619 \u3632 \u3648 \u3614 \u3634 \u3632  \u3588 \u3623 \u3610 \u3588 \u3640 \u3617 \u3605 \u3633 \u3623 \u3648 \u3629 \u3591 \u3652 \u3617 \u3656 \u3652 \u3604 \u3657  \u3605 \u3639 \u3656 \u3609 \u3648 \u3605 \u3657 \u3609  \u3617 \u3639 \u3629 \u3626 \u3633 \u3656 \u3609  \u3649 \u3614 \u3609 \u3636 \u3588 ",\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf2 Now mathematically the symptoms and the mental health technique (Title: Box Breathing\'94) will be vectorized in the same space and hence these symptoms that are best removed by box breathing will be easy to retrieve by the RAG. Then the Title is mapped to the Title in the actual PostgreSQL and the instructions are retrieved from there.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\fs23\fsmilli11707 \cf2 \expnd0\expndtw0\kerning0
+So each mental health technique and its symptoms cover the same mathematical space for the best metal health technique to be retrieved for each symptom.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 \
+}
