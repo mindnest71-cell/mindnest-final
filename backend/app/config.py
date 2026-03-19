@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+# Gemini SDK migration with env-based TEST_MODE
 from supabase import create_client, Client
 import google.generativeai as genai
 
